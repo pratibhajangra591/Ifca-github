@@ -38,19 +38,14 @@ ji_ref_list = file['arr_3']
 tm_ref_list = file['arr_4']
 
 
-
+y = ji_ref_list
+x = tm_ref_list
 
 def k(m_1, m_2):
     return ((3/85) * (c**5))/((G**3)* m_1 * m_2 * (m_1 + m_2))
  
 
-def f(j_i):
-        if np.all(j_i)< 1e-3:
-            return (j_i**m) * (10**b) 
-        else:
-            spl =  InterpolatedUnivariateSpline(ji_ref_list, tm_ref_list, ext = 2, k= 1)
-            return (spl(j_i)) 
-    
+ 
 
     
 def C_ref(m_1, m_2, a_i):
@@ -65,33 +60,55 @@ def C_ref(m_1, m_2, a_i):
 
 
 
-j_grid = np.geomspace(1e-6, 1.0, 100)
-lhs_grid = (j_grid**7)/f(j_grid)
-j_c_interp = interp1d(lhs_grid, j_grid,fill_value="extrapolate")
-
-
-#j_c = j_c_interp((C_ref(m_1, m_2, a_i))/(k(m_1, m_2) * (a_i**4)))
 
 
 
-def ji_interpolation(x, y, variable):
-    g =  InterpolatedUnivariateSpline(x, y, ext = 2, k= 1) # j_i = g(t_m)
-    return g(variable)
+def interpolation(x, y):
+    return InterpolatedUnivariateSpline(x, y, ext = 2, k= 1) # j_i = g(t_m)
+
+
+
+def interpolation_prime(x, y):
+    return  interpolation(x, y).derivative()
+
+
+#t_static = t_m/C = (j_i**m)*(10**b)
+
+def ji_interpolation(x, y, t_static):
+    return interpolation(x, y)(t_static)
             
        
-def ji_prime_into_C_interpolation(x, y, variable):
-    g =  InterpolatedUnivariateSpline(x, y, ext = 2, k= 1) # j_i = g(t_m)
-    g_prime = g.derivative()
-    return g_prime(variable) 
+def ji_prime_interpolation(x, y, t_static):
+    return interpolation_prime(x, y)(t_static) 
 
             
     
     
+#t_static = t_m/C = (j_i**m)*(10**b)
 
-def ji_into_C_fitting_function(m, b, t_m):   # t_m/C = (j_i**m) * (10**b)
-    return   (10**(-b/m)) * (t_m**(1/m))
+def ji_fitting_function(m, b, t_static):
+    return   (10**(-b/m)) * (t_static**(1/m))     
 
 
 
-def ji_into_C_prime_fitting_function(m, b, t_m):   # t_m/C = (j_i**m) * (10**b)
-    return  (1/m) * (10**(-b/m)) * (t_m**(-(m-1)/m))
+def ji_prime_fitting_function(m, b, t_static): 
+    return  (1/m) * (10**(-b/m)) * (t_static**((1-m)/m))
+
+
+j_grid = np.geomspace(1e-25, 1.0, 100)
+lhs_grid = np.zeros(len(j_grid))
+
+for i, j in enumerate(j_grid):
+    if j < 1e-3:
+        def f(j):
+            return (j**m) * (10**b)
+    else:
+        def f(j):
+            x = ji_ref_list
+            y = tm_ref_list
+            return interpolation(x, y)(j)
+
+    lhs_grid[i] = (j**7)/f(j)
+
+j_c_interp = interp1d(lhs_grid, j_grid)
+#j_c = j_c_interp((C_ref(m_1, m_2, a_i))/(k(m_1, m_2) * (a_i**4)))
